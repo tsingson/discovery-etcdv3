@@ -1,10 +1,9 @@
 package etcdv3
 
 import (
-	"errors"
 	"strings"
 
-	etcd3 "github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/clientv3"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc/naming"
 )
@@ -22,16 +21,16 @@ func NewResolver(serviceName string) *Resolver {
 // Resolve to resolve the service from etcd, target is the dial address of etcd
 // target example: "http://127.0.0.1:2379,http://127.0.0.1:12379,http://127.0.0.1:22379"
 func (re *Resolver) Resolve(target string) (naming.Watcher, error) {
-	if re.serviceName == "" {
-		return nil, errors.New("grpclb: no service name provided")
+	if len(re.serviceName) == 0 {
+		return nil, xerrors.New("grpclb: no service name provided")
 	}
 
 	// generate etcd client
-	client, err := etcd3.New(etcd3.Config{
+	client, err := clientv3.New(clientv3.Config{
 		Endpoints: strings.Split(target, ","),
 	})
 	if err != nil {
-		return nil, xerrors.Errorf("grpclb: creat etcd3 client failed: %s", err.Error())
+		return nil, xerrors.Errorf("grpclb: creat clientv3 client failed: %s", err.Error())
 	}
 
 	// Return watcher

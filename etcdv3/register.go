@@ -8,7 +8,7 @@ import (
 
 	"github.com/tsingson/zaplogger"
 
-	etcd3 "github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/clientv3"
 )
 
 const (
@@ -17,9 +17,9 @@ const (
 )
 
 type (
-	Discovery struct {
+	discovery struct {
 		Endpoints  []string
-		client     *etcd3.Client
+		client     *clientv3.Client
 		ctx        context.Context
 		cancelFunc context.CancelFunc
 
@@ -30,10 +30,10 @@ type (
 	}
 )
 
-func New(prefix string, endPoints []string, interval time.Duration, ttl int) *Discovery {
+func New(prefix string, endPoints []string, interval time.Duration, ttl int) *discovery {
 
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Discovery{
+	return &discovery{
 		Endpoints:  endPoints,
 		ctx:        ctx,
 		cancelFunc: cancel,
@@ -53,31 +53,39 @@ const Prefix = "etcdv3_naming"
 // Deregister  un register
 
 // Register
-func Register(name, host, port string, target string, interval time.Duration, ttl int) (cancelFunc context.CancelFunc, err error) {
+func Register(name, host, port string, endPoints string, interval time.Duration, ttl int) (cancelFunc context.CancelFunc, err error) {
 
 	serviceValue := net.JoinHostPort(host, port)
-	var n = New(Prefix, []string{target}, interval, ttl)
+	var n = New(Prefix, []string{endPoints}, interval, ttl)
 	return n.register(name, serviceValue)
 }
 
-func (n *Discovery) register(key, serviceValue string) (cancelFunc context.CancelFunc, err error) {
+// DiscoveryRegister
+func DiscoveryRegister(name, host, port string, endPoints string, interval time.Duration, ttl int) (cancelFunc context.CancelFunc, err error) {
+
+	serviceValue := net.JoinHostPort(host, port)
+	var n = New(_appid, []string{endPoints}, interval, ttl)
+	return n.register(name, serviceValue)
+}
+
+func (n *discovery) register(key, serviceValue string) (cancelFunc context.CancelFunc, err error) {
 
 	serviceKey := fmt.Sprintf("/%s/%s/%s", n.prefix, key, serviceValue)
 
 	ctx, cancel := context.WithCancel(n.ctx)
 
 	// get endpoints for register dial address
-	n.client, err = etcd3.New(etcd3.Config{
-		Endpoints: n.Endpoints, // strings.Split(target, ","),
+	n.client, err = clientv3.New(clientv3.Config{
+		Endpoints: n.Endpoints, // strings.Split(endPoints, ","),
 	})
 	if err != nil {
 		cancel()
-		return // xerrors.Errorf("grpclb: create etcd3 client failed: %v", err)
+		return // xerrors.Errorf("grpclb: create clientv3 client failed: %v", err)
 	}
 
 	ch := make(chan struct{}, 1)
 
-	var resp *etcd3.LeaseGrantResponse
+	var resp *clientv3.LeaseGrantResponse
 
 	resp, err = n.client.Grant(context.TODO(), int64(n.ttl))
 	if err != nil {
@@ -85,53 +93,40 @@ func (n *Discovery) register(key, serviceValue string) (cancelFunc context.Cance
 		n.client.Close()
 		cancel()
 		<-ch
-		return // xerrors.Errorf("grpclb: create etcd3 lease failed: %v", err)
+		return // xerrors.Errorf("grpclb: create clientv3 lease failed: %v", err)
 	}
 
-	if _, err = n.client.Put(context.TODO(), serviceKey, serviceValue, etcd3.WithLease(resp.ID)); err != nil {
+	if _, err = n.client.Put(context.TODO(), serviceKey, serviceValue, clientv3.WithLease(resp.ID)); err != nil {
 		n.client.Close()
 		cancel()
 		<-ch
-		return //  xerrors.Errorf("grpclb: set service '%s' with ttl to etcd3 failed: %s", key, err.Error())
+		return //  xerrors.Errorf("grpclb: set service '%s' with ttl to clientv3 failed: %s", key, err.Error())
 	}
 
 	if _, err = n.client.KeepAlive(context.TODO(), resp.ID); err != nil {
 		n.client.Close()
 		cancel()
 		<-ch
-		return // xerrors.Errorf("grpclb: refresh service '%s' with ttl to etcd3 failed: %s", key, err.Error())
+		return // xerrors.Errorf("grpclb: refresh service '%s' with ttl to clientv3 failed: %s", key, err.Error())
 	}
 
 	// wait deregister then delete
 	go func() {
 		for {
 			select {
-
 			case <-ctx.Done():
 				n.client.Delete(context.Background(), serviceKey)
-
 				n.client.Close()
-
 				ch <- struct{}{}
 			}
 		}
-
 	}()
 
 	return
 }
 
-// UnRegister delete registered service from etcd
-func (n *Discovery) UnRegister() {
-	n.client.Delete(context.Background(), n.serviceKey)
-
-	n.client.Close()
-
-	n.cancelFunc()
-}
-
 func registerTx(endpoints []string, dialTimeout, requestTimeout time.Duration) {
-	cli, err := etcd3.New(etcd3.Config{
+	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: dialTimeout,
 	})
@@ -140,7 +135,7 @@ func registerTx(endpoints []string, dialTimeout, requestTimeout time.Duration) {
 	}
 	defer cli.Close()
 
-	kvc := etcd3.NewKV(cli)
+	kvc := clientv3.NewKV(cli)
 
 	_, err = kvc.Put(context.TODO(), "key", "xyz")
 	if err != nil {
@@ -150,11 +145,11 @@ func registerTx(endpoints []string, dialTimeout, requestTimeout time.Duration) {
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	_, err = kvc.Txn(ctx).
 		// txn value comparisons are lexical
-		If(etcd3.Compare(etcd3.Value("key"), ">", "abc")).
+		If(clientv3.Compare(clientv3.Value("key"), ">", "abc")).
 		// the "Then" runs, since "xyz" > "abc"
-		Then(etcd3.OpPut("key", "XYZ")).
+		Then(clientv3.OpPut("key", "XYZ")).
 		// the "Else" does not run
-		Else(etcd3.OpPut("key", "ABC")).
+		Else(clientv3.OpPut("key", "ABC")).
 		Commit()
 	cancel()
 	if err != nil {
