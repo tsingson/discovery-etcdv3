@@ -2,14 +2,14 @@ package etcdv3
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	etcd3 "github.com/coreos/etcd/clientv3"
+	"golang.org/x/xerrors"
 	"google.golang.org/grpc/naming"
 )
 
-// resolver is the implementaion of grpc.naming.Resolver
+// Resolver is the implementaion of grpc.naming.Resolver
 type Resolver struct {
 	serviceName string // service name to resolve
 }
@@ -31,7 +31,7 @@ func (re *Resolver) Resolve(target string) (naming.Watcher, error) {
 		Endpoints: strings.Split(target, ","),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("grpclb: creat etcd3 client failed: %s", err.Error())
+		return nil, xerrors.Errorf("grpclb: creat etcd3 client failed: %s", err.Error())
 	}
 
 	// Return watcher

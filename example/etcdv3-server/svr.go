@@ -13,8 +13,8 @@ import (
 
 	"google.golang.org/grpc"
 
-	grpclb "github.com/tsingsound/discovery/etcdv3"
-	pb "github.com/tsingsound/discovery/etcdv3/helloworld"
+	discovery "github.com/tsingson/discovery-etcdv3/etcdv3"
+	pb "github.com/tsingson/discovery-etcdv3/etcdv3/helloworld"
 )
 
 var (
@@ -32,24 +32,32 @@ func main() {
 		panic(err)
 	}
 
-	err = grpclb.Register(*serv, *host, *port, *reg, time.Second*10, 15)
+	cancel, err := discovery.Register(*serv, *host, *port, *reg, time.Second*10, 15)
 	if err != nil {
 		panic(err)
 	}
 
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL, syscall.SIGHUP, syscall.SIGQUIT)
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL, syscall.SIGHUP, syscall.SIGQUIT)
+
 	go func() {
-		s := <-ch
+		s := <-signalCh
 		log.Printf("receive signal '%v'", s)
-		grpclb.UnRegister()
+		if cancel != nil {
+			cancel()
+		}
 		os.Exit(1)
 	}()
 
-	log.Printf("starting hello service at %s", *port)
-	s := grpc.NewServer()
-	pb.RegisterGreeterServer(s, &server{})
-	s.Serve(lis)
+	log.Printf("starting hello service at %grpcServ", *port)
+
+	grpcServ := grpc.NewServer()
+
+	pb.RegisterGreeterServer(grpcServ, &server{})
+	err = grpcServ.Serve(lis)
+	if err != nil {
+		// TODO: handle errors
+	}
 }
 
 // server is used to implement helloworld.GreeterServer.
