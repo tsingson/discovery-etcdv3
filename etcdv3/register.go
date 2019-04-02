@@ -18,8 +18,12 @@ const (
 
 type (
 	discovery struct {
-		Endpoints  []string
-		client     *clientv3.Client
+		Endpoints []string
+		client    *clientv3.Client
+
+		dialTimeout    time.Duration
+		requestTimeout time.Duration
+
 		ctx        context.Context
 		cancelFunc context.CancelFunc
 
@@ -71,15 +75,15 @@ func DiscoveryRegister(name, host, port string, endPoints string, interval time.
 func (n *discovery) register(key, serviceValue string) (cancelFunc context.CancelFunc, err error) {
 
 	serviceKey := fmt.Sprintf("/%s/%s/%s", n.prefix, key, serviceValue)
-
-	ctx, cancel := context.WithCancel(n.ctx)
+	var ctx context.Context
+	ctx, cancelFunc = context.WithCancel(n.ctx)
 
 	// get endpoints for register dial address
 	n.client, err = clientv3.New(clientv3.Config{
 		Endpoints: n.Endpoints, // strings.Split(endPoints, ","),
 	})
 	if err != nil {
-		cancel()
+		cancelFunc()
 		return // xerrors.Errorf("grpclb: create clientv3 client failed: %v", err)
 	}
 
@@ -91,21 +95,21 @@ func (n *discovery) register(key, serviceValue string) (cancelFunc context.Cance
 	if err != nil {
 
 		n.client.Close()
-		cancel()
+		cancelFunc()
 		<-ch
 		return // xerrors.Errorf("grpclb: create clientv3 lease failed: %v", err)
 	}
 
 	if _, err = n.client.Put(context.TODO(), serviceKey, serviceValue, clientv3.WithLease(resp.ID)); err != nil {
 		n.client.Close()
-		cancel()
+		cancelFunc()
 		<-ch
 		return //  xerrors.Errorf("grpclb: set service '%s' with ttl to clientv3 failed: %s", key, err.Error())
 	}
 
 	if _, err = n.client.KeepAlive(context.TODO(), resp.ID); err != nil {
 		n.client.Close()
-		cancel()
+		cancelFunc()
 		<-ch
 		return // xerrors.Errorf("grpclb: refresh service '%s' with ttl to clientv3 failed: %s", key, err.Error())
 	}
@@ -123,46 +127,4 @@ func (n *discovery) register(key, serviceValue string) (cancelFunc context.Cance
 	}()
 
 	return
-}
-
-func registerTx(endpoints []string, dialTimeout, requestTimeout time.Duration) {
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: dialTimeout,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer cli.Close()
-
-	kvc := clientv3.NewKV(cli)
-
-	_, err = kvc.Put(context.TODO(), "key", "xyz")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	_, err = kvc.Txn(ctx).
-		// txn value comparisons are lexical
-		If(clientv3.Compare(clientv3.Value("key"), ">", "abc")).
-		// the "Then" runs, since "xyz" > "abc"
-		Then(clientv3.OpPut("key", "XYZ")).
-		// the "Else" does not run
-		Else(clientv3.OpPut("key", "ABC")).
-		Commit()
-	cancel()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	gresp, err := kvc.Get(context.TODO(), "key")
-	cancel()
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, ev := range gresp.Kvs {
-		fmt.Printf("%s : %s\n", ev.Key, ev.Value)
-	}
-
 }

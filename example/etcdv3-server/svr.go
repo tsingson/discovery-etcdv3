@@ -3,14 +3,13 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	log "github.com/tsingson/zaplogger"
 	"google.golang.org/grpc"
 
 	discovery "github.com/tsingson/discovery-etcdv3/etcdv3"
@@ -34,7 +33,8 @@ func main() {
 
 	cancel, err := discovery.Register(*serv, *host, *port, *reg, time.Second*10, 15)
 	if err != nil {
-		panic(err)
+
+		os.Exit( -1 )
 	}
 
 	signalCh := make(chan os.Signal, 1)
@@ -49,7 +49,7 @@ func main() {
 		os.Exit(1)
 	}()
 
-	log.Printf("starting hello service at %grpcServ", *port)
+	// log.Printf("starting hello service at %grpcServ", *port)
 
 	grpcServ := grpc.NewServer()
 
@@ -65,6 +65,6 @@ type server struct{}
 
 // SayHello implements helloworld.GreeterServer
 func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
-	fmt.Printf("%v: Receive is %s\n", time.Now(), in.Name)
+	log.Info( in.Name)
 	return &pb.HelloReply{Message: "Hello " + in.Name + " from " + net.JoinHostPort(*host, *port)}, nil
 }

@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"runtime"
 	"strconv"
 	"time"
 
+	log "github.com/tsingson/zaplogger"
 	"google.golang.org/grpc"
 
 	discovery "github.com/tsingson/discovery-etcdv3/etcdv3"
@@ -52,7 +52,7 @@ func watch(discoveryKey, etcdAddr string, interval, timeout time.Duration) {
 
 			resp, err := client.SayHello(context.Background(), &pb.HelloRequest{Name: ack + strconv.Itoa(t.Second())})
 			if err == nil {
-				fmt.Printf("%v: Reply is %s\n", t, resp.Message)
+				log.Info( resp.Message)
 			}
 			// default:
 			// 	t := time.Now()
