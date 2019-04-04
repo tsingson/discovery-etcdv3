@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/mvcc/mvccpb"
+	"github.com/etcd-io/etcd/clientv3"
 	"google.golang.org/grpc/naming"
 )
 
@@ -47,12 +46,12 @@ func (w *watcher) Next() ([]*naming.Update, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	rch := w.client.Watch(ctx, prefix, clientv3.WithPrefix(), clientv3.WithPrevKV())
 	defer cancel()
-	for wresp := range rch {
-		for _, ev := range wresp.Events {
+	for watchResp := range rch {
+		for _, ev := range watchResp.Events {
 			switch ev.Type {
-			case mvccpb.PUT:
+			case clientv3.EventTypePut: //mvccpb.PUT:
 				return []*naming.Update{{Op: naming.Add, Addr: string(ev.Kv.Value)}}, nil
-			case mvccpb.DELETE:
+			case  clientv3.EventTypeDelete: //mvccpb.DELETE:
 				return []*naming.Update{{Op: naming.Delete, Addr: string(ev.PrevKv.Value)}}, nil
 			}
 		}

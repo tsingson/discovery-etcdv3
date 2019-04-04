@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc"
 
 	discovery "github.com/tsingson/discovery-etcdv3/etcdv3"
-	pb "github.com/tsingson/discovery-etcdv3/etcdv3/helloworld"
+	"github.com/tsingson/discovery-etcdv3/example/helloworld"
 )
 
 var (
@@ -34,7 +34,7 @@ func main() {
 	cancel, err := discovery.Register(*serv, *host, *port, *reg, time.Second*10, 15)
 	if err != nil {
 
-		os.Exit( -1 )
+		os.Exit(-1)
 	}
 
 	signalCh := make(chan os.Signal, 1)
@@ -53,7 +53,7 @@ func main() {
 
 	grpcServ := grpc.NewServer()
 
-	pb.RegisterGreeterServer(grpcServ, &server{})
+	helloworld.RegisterGreeterServer(grpcServ, &server{})
 	err = grpcServ.Serve(lis)
 	if err != nil {
 		// TODO: handle errors
@@ -64,7 +64,7 @@ func main() {
 type server struct{}
 
 // SayHello implements helloworld.GreeterServer
-func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
-	log.Info( in.Name)
-	return &pb.HelloReply{Message: "Hello " + in.Name + " from " + net.JoinHostPort(*host, *port)}, nil
+func (s *server) SayHello(ctx context.Context, in *helloworld.HelloRequest) (*helloworld.HelloReply, error) {
+	log.Info(in.Name)
+	return &helloworld.HelloReply{Message: "Hello " + in.Name + " from " + net.JoinHostPort(*host, *port)}, nil
 }

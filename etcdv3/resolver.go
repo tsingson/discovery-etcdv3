@@ -3,7 +3,7 @@ package etcdv3
 import (
 	"strings"
 
-	"github.com/coreos/etcd/clientv3"
+	"github.com/etcd-io/etcd/clientv3"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc/naming"
 )

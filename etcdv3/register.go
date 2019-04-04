@@ -8,7 +8,7 @@ import (
 
 	"github.com/tsingson/zaplogger"
 
-	"github.com/coreos/etcd/clientv3"
+	"github.com/etcd-io/etcd/clientv3"
 )
 
 const (
