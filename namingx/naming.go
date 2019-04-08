@@ -1,4 +1,4 @@
-package naming
+package namingx
 
 import (
 	"context"

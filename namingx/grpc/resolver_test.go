@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tsingson/discovery-etcdv3/naming"
+	"github.com/tsingson/discovery-etcdv3/namingx"
 
 	"google.golang.org/grpc/resolver"
 )
@@ -13,22 +13,22 @@ import (
 type mockResolver struct {
 }
 
-func (m *mockResolver) Fetch() (insInfo *naming.InstancesInfo, ok bool) {
-	ins := make(map[string][]*naming.Instance)
-	ins["sh001"] = []*naming.Instance{
-		{Addrs: []string{"http://127.0.0.1:8080", "grpc://127.0.0.1:9090"}, Metadata: map[string]string{naming.MetaCluster: "c1"}},
-		{Addrs: []string{"http://127.0.0.2:8080", "grpc://127.0.0.2:9090"}, Metadata: map[string]string{naming.MetaCluster: "c1"}},
-		{Addrs: []string{"http://127.0.0.3:8080", "grpc://127.0.0.3:9090"}, Metadata: map[string]string{naming.MetaCluster: "c1"}},
-		{Addrs: []string{"http://127.0.0.4:8080", "grpc://127.0.0.4:9090"}, Metadata: map[string]string{naming.MetaCluster: "c2"}},
-		{Addrs: []string{"http://127.0.0.5:8080", "grpc://127.0.0.5:9090"}, Metadata: map[string]string{naming.MetaCluster: "c3"}},
-		{Addrs: []string{"http://127.0.0.5:8080", "grpc://127.0.0.5:9090"}, Metadata: map[string]string{naming.MetaCluster: "c4"}},
+func (m *mockResolver) Fetch() (insInfo *namingx.InstancesInfo, ok bool) {
+	ins := make(map[string][]*namingx.Instance)
+	ins["sh001"] = []*namingx.Instance{
+		{Addrs: []string{"http://127.0.0.1:8080", "grpc://127.0.0.1:9090"}, Metadata: map[string]string{namingx.MetaCluster: "c1"}},
+		{Addrs: []string{"http://127.0.0.2:8080", "grpc://127.0.0.2:9090"}, Metadata: map[string]string{namingx.MetaCluster: "c1"}},
+		{Addrs: []string{"http://127.0.0.3:8080", "grpc://127.0.0.3:9090"}, Metadata: map[string]string{namingx.MetaCluster: "c1"}},
+		{Addrs: []string{"http://127.0.0.4:8080", "grpc://127.0.0.4:9090"}, Metadata: map[string]string{namingx.MetaCluster: "c2"}},
+		{Addrs: []string{"http://127.0.0.5:8080", "grpc://127.0.0.5:9090"}, Metadata: map[string]string{namingx.MetaCluster: "c3"}},
+		{Addrs: []string{"http://127.0.0.5:8080", "grpc://127.0.0.5:9090"}, Metadata: map[string]string{namingx.MetaCluster: "c4"}},
 	}
-	ins["sh002"] = []*naming.Instance{
+	ins["sh002"] = []*namingx.Instance{
 		{Addrs: []string{"http://127.0.0.1:8080", "grpc://127.0.0.1:9090"}},
 		{Addrs: []string{"http://127.0.0.2:8080", "grpc://127.0.0.2:9090"}},
 		{Addrs: []string{"http://127.0.0.3:8080", "grpc://127.0.0.3:9090"}},
 	}
-	insInfo = &naming.InstancesInfo{
+	insInfo = &namingx.InstancesInfo{
 		Instances: ins,
 	}
 	ok = true
@@ -50,7 +50,7 @@ func (m *mockResolver) Close() (err error) {
 type mockBuilder struct {
 }
 
-func (m *mockBuilder) Build(id string) naming.Resolver {
+func (m *mockBuilder) Build(id string) namingx.Resolver {
 	return &mockResolver{}
 }
 

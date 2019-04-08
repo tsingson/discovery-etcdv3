@@ -10,8 +10,8 @@ import (
 	log "github.com/tsingson/zaplogger"
 	"google.golang.org/grpc"
 
-	discovery "github.com/tsingson/discovery-etcdv3/etcdv3"
-	"github.com/tsingson/discovery-etcdv3/example/helloworld"
+	"github.com/tsingson/discovery-etcdv3/example/proto"
+	"github.com/tsingson/discovery-etcdv3/resolver"
 )
 
 var (
@@ -32,15 +32,15 @@ func main() {
 
 func watch(discoveryKey, etcdAddr string, interval, timeout time.Duration) {
 	// timeout := 10*time.Second
-	resolver := discovery.NewResolver(discoveryKey)
-	balancer := grpc.RoundRobin(resolver)
+	rl := resolver.NewResolver(discoveryKey)
+	bl := grpc.RoundRobin(rl)
 
 	var conn *grpc.ClientConn
 	var err error
 
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		conn, err = grpc.DialContext(ctx, etcdAddr, grpc.WithInsecure(), grpc.WithBalancer(balancer), grpc.WithBlock())
+		conn, err = grpc.DialContext(ctx, etcdAddr, grpc.WithInsecure(), grpc.WithBalancer(bl), grpc.WithBlock())
 		cancel()
 		if err == nil {
 			break
@@ -54,9 +54,9 @@ func watch(discoveryKey, etcdAddr string, interval, timeout time.Duration) {
 		select {
 		case <-ticker.C:
 			t := time.Now()
-			client := helloworld.NewGreeterClient(conn)
+			client := proto.NewGreeterClient(conn)
 
-			resp, err := client.SayHello(context.Background(), &helloworld.HelloRequest{Name: ack + strconv.Itoa(t.Second())})
+			resp, err := client.SayHello(context.Background(), &proto.HelloRequest{Name: ack + strconv.Itoa(t.Second())})
 			if err == nil {
 				log.Info(resp.Message)
 			}

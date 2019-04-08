@@ -1,21 +1,21 @@
-package naming_test
+package namingx_test
 
 import (
 	"fmt"
 	"time"
 
-	"github.com/tsingson/discovery-etcdv3/naming"
+	"github.com/tsingson/discovery-etcdv3/namingx"
 )
 
 // This Example register a server provider into discovery.
 func ExampleDiscovery_Register() {
-	conf := &naming.Config{
+	conf := &namingx.Config{
 		Nodes: []string{"127.0.0.1:7171"}, // NOTE: 配置种子节点(1个或多个)，client内部可根据/discovery/nodes节点获取全部node(方便后面增减节点)
 		Zone:  "sh1",
 		Env:   "test",
 	}
-	dis := naming.New(conf)
-	ins := &naming.Instance{
+	dis := namingx.New(conf)
+	ins := &namingx.Instance{
 		Zone:  "sh1",
 		Env:   "test",
 		AppID: "provider",
@@ -31,20 +31,20 @@ func ExampleDiscovery_Register() {
 }
 
 type consumer struct {
-	conf  *naming.Config
+	conf  *namingx.Config
 	appID string
-	dis   naming.Resolver
-	ins   []*naming.Instance
+	dis   namingx.Resolver
+	ins   []*namingx.Instance
 }
 
 // This Example show how get watch a server provier and get provider instances.
 func ExampleResolver_Watch() {
-	conf := &naming.Config{
+	conf := &namingx.Config{
 		Nodes: []string{"127.0.0.1:7171"},
 		Zone:  "sh1",
 		Env:   "test",
 	}
-	dis := naming.New(conf)
+	dis := namingx.New(conf)
 	c := &consumer{
 		conf:  conf,
 		appID: "provider",
@@ -78,7 +78,7 @@ func (c *consumer) getInstances(ch <-chan struct{}) {
 	}
 }
 
-func (c *consumer) getInstance() (ins *naming.Instance) {
+func (c *consumer) getInstance() (ins *namingx.Instance) {
 	// get instance by loadbalance
 	// you can use any loadbalance algorithm what you want.
 	return

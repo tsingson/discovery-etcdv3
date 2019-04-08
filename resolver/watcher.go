@@ -1,4 +1,4 @@
-package etcdv3
+package resolver
 
 import (
 	"context"
@@ -14,6 +14,9 @@ type watcher struct {
 	client        clientv3.Client
 	isInitialized bool
 }
+
+// Prefix should start and end with no slash
+const Prefix = "etcdv3_naming"
 
 // Close do nothing
 func (w *watcher) Close() {
@@ -49,9 +52,9 @@ func (w *watcher) Next() ([]*naming.Update, error) {
 	for watchResp := range rch {
 		for _, ev := range watchResp.Events {
 			switch ev.Type {
-			case clientv3.EventTypePut: //mvccpb.PUT:
+			case clientv3.EventTypePut: // mvccpb.PUT:
 				return []*naming.Update{{Op: naming.Add, Addr: string(ev.Kv.Value)}}, nil
-			case  clientv3.EventTypeDelete: //mvccpb.DELETE:
+			case clientv3.EventTypeDelete: // mvccpb.DELETE:
 				return []*naming.Update{{Op: naming.Delete, Addr: string(ev.PrevKv.Value)}}, nil
 			}
 		}

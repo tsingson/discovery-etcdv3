@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tsingson/discovery-etcdv3/naming"
+	"github.com/tsingson/discovery-etcdv3/namingx"
 
 	log "github.com/tsingson/zaplogger"
 	"google.golang.org/grpc/resolver"
@@ -30,14 +30,14 @@ type MD struct {
 }
 
 // Register register resolver builder if nil.
-func Register(b naming.Builder) {
+func Register(b namingx.Builder) {
 	resolver.Register(&Builder{b})
 }
 
 // Builder is also a resolver builder.
 // It's build() function always returns itself.
 type Builder struct {
-	naming.Builder
+	namingx.Builder
 }
 
 // Build returns itself for Resolver, because it's both a builder and a resolver.
@@ -52,10 +52,10 @@ func (b *Builder) Build(target resolver.Target, cc resolver.ClientConn, opts res
 	clusters := map[string]struct{}{}
 	if len(dsn) == 2 {
 		if u, err := url.ParseQuery(dsn[1]); err == nil {
-			if zones := u[naming.MetaZone]; len(zones) > 0 {
+			if zones := u[namingx.MetaZone]; len(zones) > 0 {
 				zone = zones[0]
 			}
-			for _, c := range u[naming.MetaCluster] {
+			for _, c := range u[namingx.MetaCluster] {
 				clusters[c] = struct{}{}
 			}
 		}
@@ -74,7 +74,7 @@ func (b *Builder) Build(target resolver.Target, cc resolver.ClientConn, opts res
 // Resolver watches for the updates on the specified target.
 // Updates include address updates and service config updates.
 type Resolver struct {
-	nr   naming.Resolver
+	nr   namingx.Resolver
 	cc   resolver.ClientConn
 	quit chan struct{}
 
@@ -86,13 +86,16 @@ type Resolver struct {
 func (r *Resolver) Close() {
 	select {
 	case r.quit <- struct{}{}:
-		r.nr.Close()
+		err := r.nr.Close()
+		if err != nil {
+
+		}
 	default:
 	}
 }
 
 // ResolveNow is a noop for Resolver.
-func (r *Resolver) ResolveNow(o resolver.ResolveNowOption) {
+func (r *Resolver) ResolveNow(ops resolver.ResolveNowOption) {
 }
 
 func (r *Resolver) watcher() {
@@ -121,14 +124,14 @@ func (r *Resolver) watcher() {
 	}
 }
 
-func (r *Resolver) newAddress(instances []*naming.Instance) {
+func (r *Resolver) newAddress(instances []*namingx.Instance) {
 	var (
 		totalWeight int64
 		addrs       = make([]resolver.Address, 0, len(instances))
 	)
 	for n, ins := range instances {
 		if len(r.clusters) > 0 {
-			if _, ok := r.clusters[ins.Metadata[naming.MetaCluster]]; !ok {
+			if _, ok := r.clusters[ins.Metadata[namingx.MetaCluster]]; !ok {
 				continue
 			}
 		}
@@ -156,9 +159,9 @@ func (r *Resolver) newAddress(instances []*naming.Instance) {
 	r.cc.NewAddress(addrs)
 }
 
-func extractAddrs(ins *naming.Instance) (addr, color string, weight int64) {
-	color = ins.Metadata[naming.MetaColor]
-	weight, _ = strconv.ParseInt(ins.Metadata[naming.MetaWeight], 10, 64)
+func extractAddrs(ins *namingx.Instance) (addr, color string, weight int64) {
+	color = ins.Metadata[namingx.MetaColor]
+	weight, _ = strconv.ParseInt(ins.Metadata[namingx.MetaWeight], 10, 64)
 	for _, a := range ins.Addrs {
 		u, err := url.Parse(a)
 		if err == nil && u.Scheme == Scheme {

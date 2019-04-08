@@ -12,8 +12,8 @@ import (
 	log "github.com/tsingson/zaplogger"
 	"google.golang.org/grpc"
 
-	discovery "github.com/tsingson/discovery-etcdv3/etcdv3"
-	"github.com/tsingson/discovery-etcdv3/example/helloworld"
+	"github.com/tsingson/discovery-etcdv3/example/proto"
+	"github.com/tsingson/discovery-etcdv3/naming"
 )
 
 var (
@@ -31,7 +31,7 @@ func main() {
 		panic(err)
 	}
 
-	cancel, err := discovery.Register(*serv, *host, *port, *reg, time.Second*10, 15)
+	cancel, err := naming.Register(*serv, *host, *port, *reg, time.Second*10, 15)
 	if err != nil {
 
 		os.Exit(-1)
@@ -53,7 +53,7 @@ func main() {
 
 	grpcServ := grpc.NewServer()
 
-	helloworld.RegisterGreeterServer(grpcServ, &server{})
+	proto.RegisterGreeterServer(grpcServ, &server{})
 	err = grpcServ.Serve(lis)
 	if err != nil {
 		// TODO: handle errors
@@ -64,7 +64,7 @@ func main() {
 type server struct{}
 
 // SayHello implements helloworld.GreeterServer
-func (s *server) SayHello(ctx context.Context, in *helloworld.HelloRequest) (*helloworld.HelloReply, error) {
+func (s *server) SayHello(ctx context.Context, in *proto.HelloRequest) (*proto.HelloReply, error) {
 	log.Info(in.Name)
-	return &helloworld.HelloReply{Message: "Hello " + in.Name + " from " + net.JoinHostPort(*host, *port)}, nil
+	return &proto.HelloReply{Message: "Hello " + in.Name + " from " + net.JoinHostPort(*host, *port)}, nil
 }

@@ -1,4 +1,4 @@
-package etcdv3
+package naming
 
 import (
 	"context"
