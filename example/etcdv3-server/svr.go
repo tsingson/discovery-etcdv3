@@ -25,48 +25,53 @@ var (
 
 func main() {
 	flag.Parse()
-	var lis net.Listener
+	noExit := make(chan struct{})
 	var err error
-	lis, err = net.Listen("tcp", net.JoinHostPort(*host, *port))
-	if err != nil {
-		panic(err)
-	}
-
+	var grpcServerName string = *serv
+	var grpcServerHost string = *host
+	var grpcServerPort string = *port
+	var etcdServerAddr string = *reg
 	var cancelFunc context.CancelFunc
-	cancelFunc, err = discovery.Register(*serv, *host, *port, *reg, time.Second*10, 15)
-	if err != nil {
 
-		os.Exit(-1)
-	}
-
-	signalCh := make(chan os.Signal, 1)
-	signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL, syscall.SIGHUP, syscall.SIGQUIT)
-
-	go func() {
-		s := <-signalCh
-		log.Printf("receive signal '%v'", s)
-		if cancelFunc != nil {
-			cancelFunc()
+	{ // register GRPC to etcd
+		cancelFunc, err = discovery.Register(grpcServerName, grpcServerHost, grpcServerPort, etcdServerAddr, time.Second*10, 15)
+		if err != nil {
+			os.Exit(-1)
 		}
-		os.Exit(1)
-	}()
-
-	// log.Printf("starting hello service at %grpcServ", *port)
-
-	grpcServ := grpc.NewServer()
-
-	proto.RegisterGreeterServer(grpcServ, &server{})
-	err = grpcServ.Serve(lis)
-	if err != nil {
-		// TODO: handle errors
 	}
-}
 
-// server is used to implement helloworld.GreeterServer.
-type server struct{}
+	// start server
+	{
+		var lis net.Listener
+		var err error
+		lis, err = net.Listen("tcp", net.JoinHostPort(*host, *port))
+		if err != nil {
+			panic(err)
+		}
 
-// SayHello implements helloworld.GreeterServer
-func (s *server) SayHello(ctx context.Context, in *proto.HelloRequest) (*proto.HelloReply, error) {
-	log.Info(in.Name)
-	return &proto.HelloReply{Message: "Hello " + in.Name + " from " + net.JoinHostPort(*host, *port)}, nil
+		// log.Printf("starting hello service at %grpcServ", *port)
+		grpcServer := grpc.NewServer()
+		proto.RegisterGreeterServer(grpcServer, &server{})
+		err = grpcServer.Serve(lis)
+		if err != nil {
+			// TODO: handle errors
+		}
+	}
+
+	// control system singal and exit
+	{
+		signalCh := make(chan os.Signal, 1)
+		signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL, syscall.SIGHUP, syscall.SIGQUIT)
+
+		go func() {
+			s := <-signalCh
+			log.Printf("receive signal '%v'", s)
+			if cancelFunc != nil {
+				cancelFunc()
+			}
+			os.Exit(1)
+		}()
+	}
+	<-noExit
+
 }

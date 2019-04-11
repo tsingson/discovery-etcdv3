@@ -94,21 +94,21 @@ func (n *discovery) register(key, serviceValue string) (cancelFunc context.Cance
 	resp, err = n.client.Grant(context.TODO(), int64(n.ttl))
 	if err != nil {
 
-	_=	n.client.Close()
+		_ = n.client.Close()
 		cancelFunc()
 		<-ch
 		return // xerrors.Errorf("grpclb: create clientv3 lease failed: %v", err)
 	}
 
 	if _, err = n.client.Put(context.TODO(), serviceKey, serviceValue, clientv3.WithLease(resp.ID)); err != nil {
-		_= n.client.Close()
+		_ = n.client.Close()
 		cancelFunc()
 		<-ch
 		return //  xerrors.Errorf("grpclb: set service '%s' with ttl to clientv3 failed: %s", key, err.Error())
 	}
 
 	if _, err = n.client.KeepAlive(context.TODO(), resp.ID); err != nil {
-	_= 	n.client.Close()
+		_ = n.client.Close()
 		cancelFunc()
 		<-ch
 		return // xerrors.Errorf("grpclb: refresh service '%s' with ttl to clientv3 failed: %s", key, err.Error())
@@ -119,8 +119,8 @@ func (n *discovery) register(key, serviceValue string) (cancelFunc context.Cance
 		for {
 			select {
 			case <-ctx.Done():
-				_,_ = n.client.Delete(context.Background(), serviceKey)
-			_= 	n.client.Close()
+				_, _ = n.client.Delete(context.Background(), serviceKey)
+				_ = n.client.Close()
 				ch <- struct{}{}
 			}
 		}

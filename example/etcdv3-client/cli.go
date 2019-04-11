@@ -22,16 +22,20 @@ var (
 func main() {
 	runtime.MemProfileRate = 0
 	runtime.GOMAXPROCS(128)
-	signal := make(chan struct{})
+	noExit := make(chan struct{})
 
 	flag.Parse()
 
-	go watch(*serv, *reg, 5*time.Millisecond, 10*time.Second)
-	<-signal
+	var ServerName string = *serv
+	var EtcdServerAddr string = *reg
+
+	go watch(ServerName, EtcdServerAddr, 5*time.Millisecond, 10*time.Second)
+	<-noExit
 }
 
 func watch(serverName, etcdNamingServiceAddr string, interval, timeout time.Duration) {
 	// timeout := 10*time.Second
+
 	rl := resolver.NewResolver(serverName)
 	bl := grpc.RoundRobin(rl)
 
@@ -47,9 +51,8 @@ func watch(serverName, etcdNamingServiceAddr string, interval, timeout time.Dura
 		}
 	}
 
-	ack := "ack"
-
-	ticker := time.NewTicker(interval)
+	var ack = "ack"
+	var ticker = time.NewTicker(interval)
 	for {
 		select {
 		case <-ticker.C:
