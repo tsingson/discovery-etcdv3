@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/tsingson/discovery-etcdv3/example/proto"
-	"github.com/tsingson/discovery-etcdv3/resolver"
+	"github.com/tsingson/discovery-etcdv3/grpc-etcdv3/resolver"
 )
 
 var (
@@ -30,18 +30,18 @@ func main() {
 	<-signal
 }
 
-func watch(discoveryKey, etcdAddr string, interval, timeout time.Duration) {
+func watch(serverName, etcdNamingServiceAddr string, interval, timeout time.Duration) {
 	// timeout := 10*time.Second
-	rl := resolver.NewResolver(discoveryKey)
+	rl := resolver.NewResolver(serverName)
 	bl := grpc.RoundRobin(rl)
 
 	var conn *grpc.ClientConn
 	var err error
 
 	for {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		conn, err = grpc.DialContext(ctx, etcdAddr, grpc.WithInsecure(), grpc.WithBalancer(bl), grpc.WithBlock())
-		cancel()
+		ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
+		conn, err = grpc.DialContext(ctx, etcdNamingServiceAddr, grpc.WithInsecure(), grpc.WithBalancer(bl), grpc.WithBlock())
+		cancelFunc()
 		if err == nil {
 			break
 		}

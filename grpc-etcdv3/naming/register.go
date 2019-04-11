@@ -55,20 +55,20 @@ var log = zaplogger.NewDevelopment()
 const Prefix = "etcdv3_naming"
 
 // Deregister  un register
+// Config discovery configures.
+type Config struct {
+	Nodes  []string
+	Region string
+	Zone   string
+	Env    string
+	Host   string
+}
 
 // Register
 func Register(name, host, port string, endPoints string, interval time.Duration, ttl int) (cancelFunc context.CancelFunc, err error) {
 
 	serviceValue := net.JoinHostPort(host, port)
 	var n = New(Prefix, []string{endPoints}, interval, ttl)
-	return n.register(name, serviceValue)
-}
-
-// DiscoveryRegister
-func DiscoveryRegister(name, host, port string, endPoints string, interval time.Duration, ttl int) (cancelFunc context.CancelFunc, err error) {
-
-	serviceValue := net.JoinHostPort(host, port)
-	var n = New(_appid, []string{endPoints}, interval, ttl)
 	return n.register(name, serviceValue)
 }
 
@@ -94,21 +94,21 @@ func (n *discovery) register(key, serviceValue string) (cancelFunc context.Cance
 	resp, err = n.client.Grant(context.TODO(), int64(n.ttl))
 	if err != nil {
 
-		n.client.Close()
+	_=	n.client.Close()
 		cancelFunc()
 		<-ch
 		return // xerrors.Errorf("grpclb: create clientv3 lease failed: %v", err)
 	}
 
 	if _, err = n.client.Put(context.TODO(), serviceKey, serviceValue, clientv3.WithLease(resp.ID)); err != nil {
-		n.client.Close()
+		_= n.client.Close()
 		cancelFunc()
 		<-ch
 		return //  xerrors.Errorf("grpclb: set service '%s' with ttl to clientv3 failed: %s", key, err.Error())
 	}
 
 	if _, err = n.client.KeepAlive(context.TODO(), resp.ID); err != nil {
-		n.client.Close()
+	_= 	n.client.Close()
 		cancelFunc()
 		<-ch
 		return // xerrors.Errorf("grpclb: refresh service '%s' with ttl to clientv3 failed: %s", key, err.Error())
@@ -119,8 +119,8 @@ func (n *discovery) register(key, serviceValue string) (cancelFunc context.Cance
 		for {
 			select {
 			case <-ctx.Done():
-				n.client.Delete(context.Background(), serviceKey)
-				n.client.Close()
+				_,_ = n.client.Delete(context.Background(), serviceKey)
+			_= 	n.client.Close()
 				ch <- struct{}{}
 			}
 		}

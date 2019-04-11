@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/tsingson/discovery-etcdv3/example/proto"
-	"github.com/tsingson/discovery-etcdv3/naming"
+	discovery "github.com/tsingson/discovery-etcdv3/grpc-etcdv3/naming"
 )
 
 var (
@@ -25,13 +25,15 @@ var (
 
 func main() {
 	flag.Parse()
-
-	lis, err := net.Listen("tcp", net.JoinHostPort(*host, *port))
+	var lis net.Listener
+	var err error
+	lis, err = net.Listen("tcp", net.JoinHostPort(*host, *port))
 	if err != nil {
 		panic(err)
 	}
 
-	cancel, err := naming.Register(*serv, *host, *port, *reg, time.Second*10, 15)
+	var cancelFunc context.CancelFunc
+	cancelFunc, err = discovery.Register(*serv, *host, *port, *reg, time.Second*10, 15)
 	if err != nil {
 
 		os.Exit(-1)
@@ -43,8 +45,8 @@ func main() {
 	go func() {
 		s := <-signalCh
 		log.Printf("receive signal '%v'", s)
-		if cancel != nil {
-			cancel()
+		if cancelFunc != nil {
+			cancelFunc()
 		}
 		os.Exit(1)
 	}()
