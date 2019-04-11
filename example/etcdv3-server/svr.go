@@ -33,12 +33,7 @@ func main() {
 	var etcdServerAddr string = *reg
 	var cancelFunc context.CancelFunc
 
-	{ // register GRPC to etcd
-		cancelFunc, err = discovery.Register(grpcServerName, grpcServerHost, grpcServerPort, etcdServerAddr, time.Second*10, 15)
-		if err != nil {
-			os.Exit(-1)
-		}
-	}
+
 
 	// start server
 	{
@@ -57,7 +52,12 @@ func main() {
 			// TODO: handle errors
 		}
 	}
-
+	{ // register GRPC to etcd
+		cancelFunc, err = discovery.Register(grpcServerName, grpcServerHost, grpcServerPort, etcdServerAddr, time.Second*10, 15)
+		if err != nil {
+			os.Exit(-1)
+		}
+	}
 	// control system singal and exit
 	{
 		signalCh := make(chan os.Signal, 1)
